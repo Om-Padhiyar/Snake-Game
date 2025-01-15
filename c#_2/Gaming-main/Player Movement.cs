@@ -5,12 +5,27 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     private Rigidbody2D rb;
+    private float horizontal;
     private BoxCollider2D coll;
     public GameObject camera;
     public CameraFollow s2;
     public bool IsUnGrounded;
     public float jump;
+    private bool isFacingRight = true;
+
+    private bool isWallSliding;
+    private float wallSlideSpeed = 2f;
+
+    private bool isWallJumping;
+    private float wallJumpingDirection;
+    private float wallJumpingTime = 0.2f;
+    private float wallJumpingCounter;
+    private float wallJumpingDuration;
+    private Vector2 wallJumpingPower = new Vector2(8f, 16f);
+
+    [SerializeField] private Transform wallCheck;
     [SerializeField] private LayerMask jumpableGround;
+    [SerializeField] private LayerMask wallLayer;
     // Start is called before the first frame update
     private void Start()
     {
@@ -42,6 +57,13 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.AddForce(new Vector2(rb.velocity.x, jump));
         }   
+
+        WallSlide();
+        WallJump();
+
+        if(!isWallJumping){
+            Flip();
+        }
     }
     private void OnCollisionEnter2D(Collision2D other){
 if (other.gameObject.CompareTag("Ground")){
@@ -54,7 +76,61 @@ if (other.gameObject.CompareTag("Ground")){
     IsUnGrounded = false;
 }
     }
-    private void OnCollisionExit2D(Collision2D other){
+    private bool IsWalled()
+{
+    return Physics2D.OverlapCircle(wallCheck.position, 0.2f, wallLayer);
+
+}   
+
+private void WallSlide(){
+    if (IsWalled() && IsUnGrounded==true && horizontal != 0f){
+isWallSliding = true;
+rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
+    }
+    else{
+        isWallSliding = false;
+    }
+}
+
+private void WallJump(){
+   if (isWallSliding){
+   isWallJumping = false;
+wallJumpingDirection = -transform.localScale.x;
+wallJumpingCounter = wallJumpingTime;
+
+CancelInvoke(nameof(StopWallJumping));
+}
+else{
+wallJumpingCounter -= Time.deltaTime;
+}
+
+if(Input.GetButtonDown("Jump") && horizontal < 0f || !isFacingRight && horizontal > 0f){
+isWallJumping = true;
+rb.velocity = new Vector2(wallJumpingDirection * wallJumpingPower.x, wallJumpingPower.y);
+wallJumpingCounter = 0f;
+
+if(transform.localScale.x != wallJumpingDirection){
+    isFacingRight = !isFacingRight;
+    Vector3 localScale = transform.localScale;
+    localScale.x *= -1f;
+    transform.localScale = localScale;
+}
+Invoke(nameof(StopWallJumping), wallJumpingDuration);
+}
+}
+private void StopWallJumping(){
+    isWallJumping = false;
+}
+
+private void Flip(){
+    if(isFacingRight && horizontal < 0f || !isFacingRight && horizontal > 0f){
+        isFacingRight = !isFacingRight;
+        Vector3 localScale = transform.localScale;
+        localScale.x *= -1f;
+        transform.localScale = localScale;
+    }
+}
+ private void OnCollisionExit2D(Collision2D other){
 
 if (other.gameObject.CompareTag("Ground")){
     IsUnGrounded = true;
