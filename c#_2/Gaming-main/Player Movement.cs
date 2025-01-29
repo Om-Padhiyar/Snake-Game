@@ -5,7 +5,6 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     private Rigidbody2D rb;
-    private float horizontal;
     private BoxCollider2D coll;
     public GameObject camera;
     public CameraFollow s2;
@@ -20,21 +19,19 @@ public class PlayerMovement : MonoBehaviour
     private float wallJumpingDirection;
     private float wallJumpingTime = 0.2f;
     private float wallJumpingCounter;
-    private float wallJumpingDuration = 0.2f; // Initialized to avoid errors
-    private Vector2 wallJumpingPower = new Vector2(8f, 16f);
+    private float wallJumpingDuration = 0.2f;
+    private Vector2 wallJumpingPower = new Vector2(8f, 8f);
 
     [SerializeField] private Transform wallCheck;
     [SerializeField] private LayerMask jumpableGround;
     [SerializeField] private LayerMask wallLayer;
 
-    // Start is called before the first frame update
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         coll = GetComponent<BoxCollider2D>();
         s2 = GameObject.Find("Main Camera").GetComponent<CameraFollow>();
 
-        // Check if the script reference is valid
         if (s2 != null)
         {
             Debug.Log("CameraFollow script found!");
@@ -45,15 +42,14 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
     private void Update()
     {
-        horizontal = Input.GetAxisRaw("Horizontal");
+        float horizontal = Input.GetAxisRaw("Horizontal");
         rb.velocity = new Vector2(horizontal * 7f, rb.velocity.y);
 
-        if (Input.GetButtonDown("Jump") && IsGrounded())
+        if (Input.GetButtonDown("Jump") && !IsUnGrounded)
         {
-            rb.velocity = new Vector2(rb.velocity.x, jump); // Smoother jump force
+           rb.AddForce(new Vector2(0f, jump), ForceMode2D.Impulse);
         }
 
         WallSlide();
@@ -61,7 +57,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (!isWallJumping)
         {
-            Flip();
+            Flip(horizontal);
         }
     }
 
@@ -89,12 +85,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private bool IsGrounded()
-    {
-        // Use Physics2D.OverlapCircle for accurate ground detection
-        return Physics2D.OverlapCircle(transform.position, 0.1f, jumpableGround);
-    }
-
     private bool IsWalled()
     {
         return Physics2D.OverlapCircle(wallCheck.position, 0.2f, wallLayer);
@@ -102,7 +92,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void WallSlide()
     {
-        if (IsWalled() && IsUnGrounded && horizontal != 0f)
+        if (IsWalled() && IsUnGrounded && rb.velocity.x != 0f)
         {
             isWallSliding = true;
             rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
@@ -128,7 +118,7 @@ public class PlayerMovement : MonoBehaviour
             wallJumpingCounter -= Time.deltaTime;
         }
 
-        if (Input.GetButtonDown("Jump") && (horizontal < 0f || (!isFacingRight && horizontal > 0f)))
+        if (Input.GetButtonDown("Jump") && (rb.velocity.x < 0f || (!isFacingRight && rb.velocity.x > 0f)))
         {
             isWallJumping = true;
             rb.velocity = new Vector2(wallJumpingDirection * wallJumpingPower.x, wallJumpingPower.y);
@@ -150,9 +140,9 @@ public class PlayerMovement : MonoBehaviour
         isWallJumping = false;
     }
 
-    private void Flip()
+    private void Flip(float horizontal)
     {
-        if (isFacingRight && horizontal < 0f || !isFacingRight && horizontal > 0f)
+        if ((isFacingRight && horizontal < 0f) || (!isFacingRight && horizontal > 0f))
         {
             isFacingRight = !isFacingRight;
             Vector3 localScale = transform.localScale;
@@ -170,6 +160,6 @@ public class PlayerMovement : MonoBehaviour
         }
 
         Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(transform.position, 0.1f); // Ground check visualization
+        Gizmos.DrawWireSphere(transform.position, 0.1f);
     }
 }
