@@ -8,16 +8,15 @@ public class PlayerMovement : MonoBehaviour
     private BoxCollider2D coll;
     public GameObject camera;
     public CameraFollow s2;
-    public bool IsUnGrounded;
+    public bool IsGrounded = false;
      private bool isFacingRight = true;
-    public float jump;
+   [SerializeField] public int jump = 8;
 private float timeSinceLanded = 0f;
 public float correctionDelay = 1.5f; // Time before correcting rotation
 public float correctionSpeed = 5f;   // Speed of correction
 private bool isCorrectingRotation = false;
-
-
-    [SerializeField] private LayerMask jumpableGround;
+public Transform groundCheck;
+public LayerMask groundLayer; 
     // Start is called before the first frame update
     private void Start()
     {
@@ -42,17 +41,17 @@ private bool isCorrectingRotation = false;
     // Update is called once per frame
     private void Update()
 
-    { 
-      
+    {
+      IsGrounded = Physics2D.OverlapCapsule(groundCheck.position, new Vector2(1f, 0.2f), CapsuleDirection2D.Horizontal, 0, groundLayer);
         float horizontal = Input.GetAxisRaw("Horizontal");
         rb.velocity = new Vector2(horizontal * 7f, rb.velocity.y);
 
-        if (Input.GetButtonDown("Jump") && !IsUnGrounded)
+        if (Input.GetButtonDown("Jump") && IsGrounded)
         {
-            rb.AddForce(new Vector2(rb.velocity.x, jump));
+            rb.velocity = new Vector2(rb.velocity.x, jump);
         }   
         Flip(horizontal);
-        if (!IsUnGrounded) // If grounded
+        if (IsGrounded) // If grounded
 {
     timeSinceLanded += Time.deltaTime;
 
@@ -63,25 +62,6 @@ private bool isCorrectingRotation = false;
 }
     }
 
-    private void OnCollisionEnter2D(Collision2D other)
-{
-    if (other.gameObject.CompareTag("Ground"))
-    {
-        IsUnGrounded = false;
-        timeSinceLanded = 0f; // Reset the timer
-        isCorrectingRotation = false; // Stop correction if interrupted
-    }
-}
-
-    
-    private void OnCollisionExit2D(Collision2D other)
-{
-    if (other.gameObject.CompareTag("Ground"))
-    {
-        IsUnGrounded = true;
-        isCorrectingRotation = false; // Prevent rotation correction if jumping
-    }
-}
     private void Flip(float horizontal)
     {
         if ((isFacingRight && horizontal < 0f) || (!isFacingRight && horizontal > 0f))
